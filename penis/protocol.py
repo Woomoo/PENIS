@@ -112,7 +112,7 @@ class rfc1459_client(protocol_base):
             pass
 
         # convert to nenolod/irc.staticbox.net
-        origin = tuple['origin'][:tuple['origin'].find('!')] + "/" + self.sock.hostname
+        origin = tuple['origin'][:tuple['origin'].find('!')] + "/" + self.sock.friendlyname
 
         # build info tuple.
         vchan = self.sock.vchans[tuple['args'][0]]
