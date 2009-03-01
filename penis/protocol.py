@@ -58,9 +58,18 @@ class protocol_base(object):
         return info
 
     def handle_command_tuple(self, tuple):
-        pass
+        try:
+            self.handlers[tuple['command']](self, tuple)
+        except KeyError:
+            print "!!! Handler for %s not implemented" % tuple['command']
 
 class rfc1459_client(protocol_base):
+    def __init__(self, sock):
+        super(rfc1459_client, self).__init__(sock)
+        self.handlers = {
+            'PING': self.handle_pong
+        }
+
     def handshake(self, name, password):
         if password != None:
             self.sock.write_line("PASS %s" % password)
@@ -68,9 +77,8 @@ class rfc1459_client(protocol_base):
         self.sock.write_line("NICK %s" % name)
         self.sock.write_line("USER %s penis penis :Python External Network Integration Service" % (name))
 
-    def handle_command_tuple(self, tuple):
-        if tuple['command'] == 'PING':
-            self.sock.write_line("PONG :" + tuple['args'][0])
+    def handle_pong(self, tuple):
+        self.sock.write_line("PONG %s" % tuple['args'][0])
 
 if __name__ == '__main__':
     p = protocol_base(None)
