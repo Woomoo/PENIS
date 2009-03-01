@@ -13,9 +13,17 @@ suitability or fitness.
 
 """
 
+clientlist = []
+
 class protocol_base(object):
     def __init__(self, socket):
+        global clientlist
         self.sock = socket
+        clientlist.append(self)
+
+    def __del__(self):
+        global clientlist
+        clientlist.remove(self)
 
     def handshake(self, name, password):
         pass
@@ -59,15 +67,28 @@ class protocol_base(object):
 
     def handle_command_tuple(self, tuple):
         try:
-            self.handlers[tuple['command']](self, tuple)
+            self.handlers[tuple['command']](tuple)
         except KeyError:
             print "!!! Handler for %s not implemented" % tuple['command']
+
+    # action stubs
+    def join_channel(self, channel):
+        print "!!! join_channel stub!"
+
+    def send_to_channel(self, channel, message):
+        print "!!! send_to_channel stub!"
+
+    # event stubs
+    def handle_channel_message(self, info):
+        print "!!! handle_channel_message stub!"
 
 class rfc1459_client(protocol_base):
     def __init__(self, sock):
         super(rfc1459_client, self).__init__(sock)
         self.handlers = {
-            'PING': self.handle_pong
+	    '001': self.handle_001,
+            'PING': self.handle_pong,
+            'PRIVMSG': self.handle_privmsg
         }
 
     def handshake(self, name, password):
@@ -77,8 +98,41 @@ class rfc1459_client(protocol_base):
         self.sock.write_line("NICK %s" % name)
         self.sock.write_line("USER %s penis penis :Python External Network Integration Service" % (name))
 
+    def handle_001(self, tuple):
+        for vchan in self.sock.channels:
+             self.join_channel(self.sock.channels[vchan])
+
     def handle_pong(self, tuple):
         self.sock.write_line("PONG %s" % tuple['args'][0])
+
+    def handle_privmsg(self, tuple):
+        global clientlist
+
+        if tuple['args'][0][0] != '#':
+            pass
+
+        # convert to nenolod/irc.staticbox.net
+        origin = tuple['origin'][:tuple['origin'].find('!')] + "/" + self.sock.hostname
+
+        # build info tuple.
+        vchan = self.sock.vchans[tuple['args'][0]]
+        info = {'origin': origin, 'target': vchan, 'message': tuple['args'][1]}
+        for i in clientlist:
+            if i.sock == self.sock:
+                continue
+
+            i.handle_channel_message(info)
+
+    # actions
+    def join_channel(self, channel):
+        self.sock.write_line("JOIN %s" % channel)
+
+    def send_to_channel(self, channel, message):
+        self.sock.write_line("PRIVMSG %s :%s" % (channel, message))
+
+    # events
+    def handle_channel_message(self, info):
+        self.send_to_channel(self.sock.channels[info['target']], "<%s> %s" % (info['origin'], info['message']))
 
 if __name__ == '__main__':
     p = protocol_base(None)

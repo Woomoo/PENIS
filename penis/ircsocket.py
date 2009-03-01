@@ -22,7 +22,7 @@ class ircconn(asyncore.dispatcher):
 
     It subclasses asyncore.dispatcher for the sake of the canned event loop.
     """
-    def __init__(self, hostname, port, name=None, password=None, protocol_handler=None):
+    def __init__(self, hostname, port, name=None, password=None, protocol_handler=None, channels={}):
         """
         Constructor for penis.ircsocket.ircconn.
 
@@ -41,6 +41,13 @@ class ircconn(asyncore.dispatcher):
         self.protocol_handler = protocol_handler(self)
         self.sendq = ""
         self.readbuf = ""
+
+        self.channels = channels
+
+        # build a dictionary of the inverse mapping.
+        self.vchans = {}
+        for vchan in self.channels:
+             self.vchans[self.channels[vchan]] = vchan
 
     # sendq
     def writable(self):
