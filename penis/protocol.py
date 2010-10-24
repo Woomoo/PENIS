@@ -99,6 +99,8 @@ class rfc1459_client(protocol_base):
         self.sock.write_line("USER %s penis penis :Python External Network Integration Service" % (name))
 
     def handle_001(self, tuple):
+    	if self.sock.nickserv:
+    		self.sock.write_line("PRIVMSG NickServ :identify %s %s" % self.sock.nickserv)
         for vchan in self.sock.channels:
              self.join_channel(self.sock.channels[vchan])
 

@@ -22,7 +22,7 @@ class ircconn(asyncore.dispatcher):
 
     It subclasses asyncore.dispatcher for the sake of the canned event loop.
     """
-    def __init__(self, hostname, port, name=None, password=None, protocol_handler=None, channels={}, friendlyname=None):
+    def __init__(self, hostname, port, name=None, password=None, protocol_handler=None, channels={}, friendlyname=None, nickserv=None):
         """
         Constructor for penis.ircsocket.ircconn.
 
@@ -45,6 +45,7 @@ class ircconn(asyncore.dispatcher):
         if friendlyname == None:
             friendlyname = self.hostname
         self.friendlyname = friendlyname
+        self.nickserv = nickserv
 
         self.channels = channels
 
