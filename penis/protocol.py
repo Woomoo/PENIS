@@ -116,7 +116,12 @@ class rfc1459_client(protocol_base):
 
         # build info tuple.
         vchan = self.sock.vchans[tuple['args'][0]]
-        info = {'origin': origin, 'target': vchan, 'message': tuple['args'][1]}
+        if tuple['args'][1].startswith('\x01ACTION ') and tuple['args'][1][-1] == '\x01':
+            action = True
+            tuple['args'][1] = tuple['args'][1][8:-1]
+        else:
+            action = False
+        info = {'origin': origin, 'target': vchan, 'message': tuple['args'][1], 'action': action}
         for i in clientlist:
             if i.sock == self.sock:
                 continue
@@ -132,7 +137,10 @@ class rfc1459_client(protocol_base):
 
     # events
     def handle_channel_message(self, info):
-        self.send_to_channel(self.sock.channels[info['target']], "<%s> %s" % (info['origin'], info['message']))
+    	if info['action']:
+	        self.send_to_channel(self.sock.channels[info['target']], "* %s %s" % (info['origin'], info['message']))
+        else:
+	        self.send_to_channel(self.sock.channels[info['target']], "<%s> %s" % (info['origin'], info['message']))
 
 if __name__ == '__main__':
     p = protocol_base(None)
