@@ -82,12 +82,17 @@ class protocol_base(object):
     def handle_channel_message(self, info):
         print "!!! handle_channel_message stub!"
 
+    def handle_meta_message(self, info):
+        print "!!! handle_meta_message stub!"
+
 class rfc1459_client(protocol_base):
     def __init__(self, sock):
         super(rfc1459_client, self).__init__(sock)
         self.handlers = {
 	    '001': self.handle_001,
             'PING': self.handle_pong,
+            'JOIN': self.handle_join,
+            'PART': self.handle_part,
             'PRIVMSG': self.handle_privmsg
         }
 
@@ -123,12 +128,51 @@ class rfc1459_client(protocol_base):
             tuple['args'][1] = tuple['args'][1][8:-1]
         else:
             action = False
+        
         info = {'origin': origin, 'target': vchan, 'message': tuple['args'][1], 'action': action}
         for i in clientlist:
             if i.sock == self.sock:
                 continue
 
             i.handle_channel_message(info)
+    
+    def handle_join(self, tuple):
+        global clientlist
+
+        if tuple['args'][0][0] != '#':
+            pass
+
+        # convert to nenolod/irc.staticbox.net
+        origin = tuple['origin'][:tuple['origin'].find('!')] + "/" + self.sock.friendlyname
+
+        # build info tuple.
+        vchan = self.sock.vchans[tuple['args'][0]]
+        
+        info = {'origin': origin, 'target': vchan, 'message': '%s has joined' % origin}
+        for i in clientlist:
+            if i.sock == self.sock:
+                continue
+
+            i.handle_meta_message(info)
+    
+    def handle_part(self, tuple):
+        global clientlist
+
+        if tuple['args'][0][0] != '#':
+            pass
+
+        # convert to nenolod/irc.staticbox.net
+        origin = tuple['origin'][:tuple['origin'].find('!')] + "/" + self.sock.friendlyname
+
+        # build info tuple.
+        vchan = self.sock.vchans[tuple['args'][0]]
+        
+        info = {'origin': origin, 'target': vchan, 'message': '%s has parted' % origin}
+        for i in clientlist:
+            if i.sock == self.sock:
+                continue
+
+            i.handle_meta_message(info)
 
     # actions
     def join_channel(self, channel):
@@ -144,9 +188,13 @@ class rfc1459_client(protocol_base):
         else:
 	        self.send_to_channel(self.sock.channels[info['target']], "<%s> %s" % (info['origin'], info['message']))
 
+    def handle_meta_message(self, info):
+        print self.sock.channels
+        if info['target'] in self.sock.channels.keys():
+	        self.send_to_channel(self.sock.channels[info['target']], "** %s" % (info['message']))
+
 if __name__ == '__main__':
     p = protocol_base(None)
     print p.parse(":lol!lol@lol PRIVMSG #lol :lol test\r\n");
     print p.parse(":irc.lol.com 001 lol :Welcome to IRC lol\r\n");
     print p.parse("002 lol moocows\r\n");
-
